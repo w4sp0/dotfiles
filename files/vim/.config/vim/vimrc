@@ -301,11 +301,13 @@ nnoremap <silent> <C-w>Q :tabclose<CR>
 nnoremap <silent> <C-w>, :if exists(':Wcd')<Bar>exe 'Wcd'<Bar>elseif exists(':Lcd')<Bar>exe 'Lcd'<Bar>elseif exists(':Glcd')<Bar>exe 'Glcd'<Bar>else<Bar>lcd %:h<Bar>endif<CR>
 nmap cd <C-w>,
 
-nnoremap <leader>sf :Files<CR>
-nnoremap <leader>sg :Rg<CR>
-nnoremap <leader>sb :Buffers<CR>
-nnoremap <leader>st :BTags<CR>
-nnoremap <leader>sc :Changes<CR>
+nnoremap <leader>ff :Files<CR>
+nnoremap <leader>fg :Rg<CR>
+nnoremap <leader>sg :Rg <C-r>=expand('<cword>')<CR><CR>
+nnoremap <leader>vg :vimgrep /<C-r>=expand('<cword>')<CR>:copen<CR>
+nnoremap <leader>fb :Buffers<CR>
+nnoremap <leader>ft :BTags<CR>
+nnoremap <leader>fc :Changes<CR>
 
 " Paste last thing yanked
 nnoremap ,p "0p
