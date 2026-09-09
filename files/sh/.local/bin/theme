@@ -1,0 +1,289 @@
+#!/bin/sh
+
+## SPDX-FileCopyrightText: 2026 Radek Janik <cyberwassp@gmail.com>
+##
+## SPDX-License-Identifier: AGPL-3.0-or-later
+
+## Toggle light/dark mode for the terminal stack: xterm colors, tmux styles
+## and LS_COLORS. Changes apply live to running terminals and persist for
+## terminals opened later.
+
+set -eu
+
+: "${XDG_CONFIG_HOME:=${HOME}/.config}"
+: "${XDG_STATE_HOME:=${HOME}/.local/state}"
+
+state_dir="${XDG_STATE_HOME}/theme"
+mode_file="${state_dir}/mode"
+xres_file="${state_dir}/xresources"
+tmux_dir="${XDG_CONFIG_HOME}/tmux"
+default_mode="dark"
+
+## Background, foreground and cursor per mode. The 16 color palette is left
+## at the terminal defaults on purpose.
+##
+## Light is a neutral grey rather than white, with graphite instead of
+## black: roughly 6.3:1 contrast against the 21:1 of black on white. Both
+## values are pure greys, so nothing in the theme carries a colour cast.
+dark_bg="#000000"
+dark_fg="#ffffff"
+dark_cursor="#ffffff"
+light_bg="#d4d4d4"
+light_fg="#474747"
+light_cursor="#6b6b6b"
+
+## The 16 colour palette, colour0 through colour15 in order. Both modes
+## must be defined: the palette lives in the terminal, not in the theme, so
+## a mode that set nothing would inherit whatever the previous mode left.
+##
+## Dark is xterm's own default palette, reproduced exactly, so dark mode
+## looks the same as it did before the palette was managed at all.
+dark_palette="
+  #000000 #cd0000 #00cd00 #cdcd00 #0000ee #cd00cd #00cdcd #e5e5e5
+  #7f7f7f #ff0000 #00ff00 #ffff00 #5c5cff #ff00ff #00ffff #ffffff
+"
+
+## Light is muted to roughly 4.5:1 against the grey ground. Slot 8 is the
+## dim grey the prompt frame and comments are drawn in, so it tracks the
+## background: it moved a step darker when the ground did, to hold the
+## same separation. Two departures from the usual mapping, both for
+## legibility rather than fidelity:
+##
+##   colour7 and colour15, nominally white, are dark. Programs use them as
+##   "bright foreground", which on a light ground has to mean dark ink or
+##   the text disappears. colour15 is the darker of the two, so bold-white
+##   output still reads as emphasis.
+##
+##   colour3 and colour11, nominally yellow, are amber. Yellow at any
+##   useful lightness is illegible here.
+light_palette="
+  #4a4a4a #a03028 #4f6f3a #8a6a20 #37568c #79418a #3a6b6b #646464
+  #808080 #8a1f18 #3c5a28 #6f5210 #26407a #642f75 #2b5757 #303030
+"
+
+show_help(){
+  cat <<'EOF'
+Usage: theme [COMMAND]
+
+Toggle light/dark mode for the terminal stack.
+
+Commands:
+  dark          Switch to dark mode.
+  light         Switch to light mode.
+  toggle        Switch to whichever mode is not active.
+  status        Print the current mode. Default when no command is given.
+  reload        Re-apply the current mode, after editing a theme file.
+  -h, --help    Show this help.
+
+What it changes:
+  xterm         Background, foreground, cursor and the 16 color palette.
+                Live through OSC escape sequences, persistent through xrdb.
+  tmux          Status bar and pane styles. Live on a running server.
+  LS_COLORS     Read by new shells at start, by existing zsh shells at the
+                next prompt.
+
+Examples:
+  theme toggle
+  theme light
+  theme status
+EOF
+}
+
+die(){
+  printf 'theme: %s\n' "${1}" >&2
+  exit 1
+}
+
+get_mode(){
+  mode=""
+  if test -r "${mode_file}"; then
+    read -r mode < "${mode_file}" || mode=""
+  fi
+  case "${mode}" in
+    light|dark) printf '%s\n' "${mode}";;
+    *) printf '%s\n' "${default_mode}";;
+  esac
+}
+
+## Sets list_contains_result to 'yes' when the newline separated list in
+## $1 contains the exact item $2, and to the empty string otherwise. The
+## answer is a variable rather than an exit status so that callers do not
+## have to run it in a condition, where 'set -e' would not apply.
+list_contains(){
+  list_contains_result=""
+  case "
+${1}
+" in
+    *"
+${2}
+"*) list_contains_result="yes";;
+    *) ;;
+  esac
+}
+
+## Terminals to repaint: every pseudo terminal we may write to, minus tmux
+## panes, plus the real terminals tmux clients are attached to. tmux would
+## swallow color sequences written into a pane, so we address the outer
+## terminal instead.
+target_ttys(){
+  panes=""
+  clients=""
+  if command -v tmux >/dev/null 2>&1 && tmux list-sessions >/dev/null 2>&1; then
+    panes="$(tmux list-panes -a -F '#{pane_tty}' 2>/dev/null || true)"
+    clients="$(tmux list-clients -F '#{client_tty}' 2>/dev/null || true)"
+  fi
+
+  targets=""
+  for tty in /dev/pts/[0-9]*; do
+    test -w "${tty}" || continue
+    list_contains "${panes}" "${tty}"
+    test -z "${list_contains_result}" || continue
+    targets="${targets}${tty}
+"
+  done
+
+  for tty in ${clients}; do
+    test -w "${tty}" || continue
+    list_contains "${targets}" "${tty}"
+    test -z "${list_contains_result}" || continue
+    targets="${targets}${tty}
+"
+  done
+
+  printf '%s' "${targets}"
+}
+
+## OSC 4;N sets palette entry N. Emitted as one run so a terminal never
+## renders a half applied palette.
+palette_sequence(){
+  pal_index=0
+  for pal_color in ${1}; do
+    printf '\033]4;%d;%s\007' "${pal_index}" "${pal_color}"
+    pal_index=$((pal_index + 1))
+  done
+}
+
+count_words(){
+  # shellcheck disable=SC2086
+  set -- ${1}
+  printf '%s' "${#}"
+}
+
+## OSC 10 foreground, OSC 11 background, OSC 12 cursor, OSC 4 palette.
+## Needs xterm to be built with dynamicColors enabled, which xresources
+## already sets.
+apply_terminal(){
+  osc_fg="${1}"
+  osc_bg="${2}"
+  osc_cursor="${3}"
+  osc_palette="$(palette_sequence "${4}")"
+
+  for tty in $(target_ttys); do
+    printf '%s\033]10;%s\007\033]11;%s\007\033]12;%s\007' \
+      "${osc_palette}" "${osc_fg}" "${osc_bg}" "${osc_cursor}" \
+      > "${tty}" 2>/dev/null || true
+  done
+}
+
+## Persist the colors so terminals started later come up in the right mode.
+apply_xresources(){
+  xres_bg="${1}"
+  xres_fg="${2}"
+  xres_cursor="${3}"
+  xres_palette="${4}"
+
+  mkdir -p -- "${state_dir}"
+  cat > "${xres_file}" <<EOF
+! Generated by theme. Edit the color values in theme instead.
+*.background:        ${xres_bg}
+*.foreground:        ${xres_fg}
+*.cursorColor:       ${xres_cursor}
+*.VT100.background:  ${xres_bg}
+*.VT100.foreground:  ${xres_fg}
+*.VT100.cursorColor: ${xres_cursor}
+Rxvt*background:     ${xres_bg}
+Rxvt*foreground:     ${xres_fg}
+URxvt.background:    ${xres_bg}
+URxvt.foreground:    ${xres_fg}
+URxvt.cursorColor:   ${xres_cursor}
+EOF
+
+  xres_index=0
+  for xres_color in ${xres_palette}; do
+    printf '*.color%-3s           %s\n' "${xres_index}:" "${xres_color}" \
+      >> "${xres_file}"
+    xres_index=$((xres_index + 1))
+  done
+
+  xres_index=0
+  for xres_color in ${xres_palette}; do
+    printf 'URxvt.color%-3s       %s\n' "${xres_index}:" "${xres_color}" \
+      >> "${xres_file}"
+    xres_index=$((xres_index + 1))
+  done
+
+  if command -v xrdb >/dev/null 2>&1 && test -n "${DISPLAY-}"; then
+    xrdb -merge "${xres_file}" || true
+  fi
+}
+
+apply_tmux(){
+  tmux_mode="${1}"
+  tmux_theme="${tmux_dir}/theme-${tmux_mode}.conf"
+
+  test -r "${tmux_theme}" || return 0
+  ln -sfn -- "theme-${tmux_mode}.conf" "${tmux_dir}/theme.conf"
+
+  if command -v tmux >/dev/null 2>&1 && tmux list-sessions >/dev/null 2>&1; then
+    tmux source-file "${tmux_theme}" 2>/dev/null || true
+  fi
+}
+
+set_mode(){
+  new_mode="${1}"
+  case "${new_mode}" in
+    dark)
+      bg="${dark_bg}"; fg="${dark_fg}"; cursor="${dark_cursor}"
+      palette="${dark_palette}"
+      ;;
+    light)
+      bg="${light_bg}"; fg="${light_fg}"; cursor="${light_cursor}"
+      palette="${light_palette}"
+      ;;
+    *) die "unknown mode '${new_mode}'";;
+  esac
+
+  ## A short palette would leave the tail of the previous one in place,
+  ## which is confusing to debug from the outside. Fail loudly instead.
+  palette_size="$(count_words "${palette}")"
+  if test "${palette_size}" -ne 16; then
+    die "${new_mode} palette has ${palette_size} colors, expected 16"
+  fi
+
+  mkdir -p -- "${state_dir}"
+  printf '%s\n' "${new_mode}" > "${mode_file}"
+
+  apply_terminal "${fg}" "${bg}" "${cursor}" "${palette}"
+  apply_xresources "${bg}" "${fg}" "${cursor}" "${palette}"
+  apply_tmux "${new_mode}"
+
+  printf '%s\n' "${new_mode}"
+}
+
+case "${1:-status}" in
+  -h|--help|help) show_help;;
+  status) get_mode;;
+  reload)
+    mode="$(get_mode)"
+    set_mode "${mode}" >/dev/null
+    ;;
+  dark|light) set_mode "${1}" >/dev/null;;
+  toggle)
+    mode="$(get_mode)"
+    case "${mode}" in
+      dark) set_mode light >/dev/null;;
+      *) set_mode dark >/dev/null;;
+    esac
+    ;;
+  *) die "unknown command '${1}', try 'theme --help'";;
+esac

@@ -14,6 +14,15 @@ test -r "${HOME}/.profile" && . "${HOME}/.profile"
 ## Load resources.
 if command -v xrdb >/dev/null; then
   xrdb "${XDG_CONFIG_HOME}/x11/xresources"
+  ## Colors saved by theme(1), merged last so they win over the defaults
+  ## above. The xrdb call before this one replaces the whole database and
+  ## therefore drops what theme(1) merged into it during the last session,
+  ## so it has to be re-merged on every login.
+  theme_xresources="${XDG_STATE_HOME:-${HOME}/.local/state}/theme/xresources"
+  if test -r "${theme_xresources}"; then
+    xrdb -merge "${theme_xresources}"
+  fi
+  unset theme_xresources
 fi
 
 ## If running normal OS or Qubes: Dom0, apply settings.

@@ -349,18 +349,43 @@ case "${color_support}" in
   *) color_prompt=no;;
 esac
 
-if test "${color_prompt-}" = "yes"; then
-  if has dircolors; then
-    ## Use dircolors if available.
-    if test -r "${XDG_CONFIG_HOME}/dircolors/dircolors"; then
-      dircolors="$(dircolors -b -- "${XDG_CONFIG_HOME}/dircolors/dircolors")"
-      eval "${dircolors}"
-    else
-      dircolors="$(dircolors -b)"
-      eval "${dircolors}"
-    fi
-    unset dircolors
-    ## Fix bold on some terminals.
+_theme_mode_file="${XDG_STATE_HOME:-${HOME}/.local/state}/theme/mode"
+
+## Current mode as recorded by theme(1), dark when it has never run.
+_get_theme_mode(){
+  _theme_mode=""
+  if test -r "${_theme_mode_file}"; then
+    read -r _theme_mode < "${_theme_mode_file}" || _theme_mode=""
+  fi
+  case "${_theme_mode}" in
+    light) printf 'light\n';;
+    *) printf 'dark\n';;
+  esac
+}
+
+## Load the dircolors database matching the current mode. Kept a function
+## so that shells already running can follow a switch, see the precmd hook
+## in zshrc.
+_set_ls_colors(){
+  _ls_colors_mode="$(_get_theme_mode)"
+  case "${_ls_colors_mode}" in
+    light) _ls_colors_db="${XDG_CONFIG_HOME}/dircolors/dircolors-light";;
+    *) _ls_colors_db="${XDG_CONFIG_HOME}/dircolors/dircolors";;
+  esac
+
+  if test -r "${_ls_colors_db}"; then
+    _ls_colors_eval="$(dircolors -b -- "${_ls_colors_db}")"
+  else
+    _ls_colors_eval="$(dircolors -b)"
+  fi
+  eval "${_ls_colors_eval}"
+  unset _ls_colors_eval
+
+  ## Fix bold on some terminals. The light database names its colors by
+  ## 256 color index, where '01;38;5;NNN' would be mangled into an invalid
+  ## '00;98;5;NNN' by the substitution below, so only the dark one is
+  ## rewritten.
+  if test "${_ls_colors_mode}" != "light"; then
     case "${TERM-}" in
       xterm*|screen*)
         LS_COLORS="$(printf '%s' "${LS_COLORS}" |
@@ -368,7 +393,17 @@ if test "${color_prompt-}" = "yes"; then
         ;;
       *) ;;
     esac
-    export LS_COLORS
+  fi
+
+  export LS_COLORS
+  ## Read by the precmd hook to tell whether the mode has moved on.
+  _ls_colors_applied="${_ls_colors_mode}"
+  unset _ls_colors_mode _ls_colors_db
+}
+
+if test "${color_prompt-}" = "yes"; then
+  if has dircolors; then
+    _set_ls_colors
   else
     ## BSD
     CLICOLOR=1 CLICOLOR_FORCE=1 LSCOLORS=ExGxFxdxCxfxDxxbadacad

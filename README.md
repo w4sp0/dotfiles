@@ -18,6 +18,7 @@ Dotfiles.
             *   [Pillar example](#pillar-example)
     *   [Script](#script)
 *   [Usage](#usage)
+    *   [Theme](#theme)
 *   [License](#license)
 
 ## Description
@@ -158,6 +159,31 @@ Supported programs and the expected file names in `$HOME`:
 *   **vim**:  .vimrc.local
 *   **x11**:  .xprofile.local, .config/x11/xprofile.d/ (.sh suffix)
 *   **zsh**:  .zshrc.local
+
+### Theme
+
+The `theme` command toggles the terminal stack between a dark and a light
+mode:
+
+```sh
+theme toggle
+theme light
+theme status
+```
+
+Running terminals and tmux servers are repainted immediately. The mode is
+saved to `$XDG_STATE_HOME/theme/mode`, so terminals, tmux servers and shells
+started later come up in the same mode. What each component contributes:
+
+*   **sh**:   `LS_COLORS`, from `dircolors` or `dircolors-light`
+*   **tmux**: `theme.conf`, a symlink to `theme-dark.conf` or
+    `theme-light.conf`, sourced by `tmux.conf`
+*   **x11**:  xterm background, foreground, cursor and the 16 color palette,
+    saved to `$XDG_STATE_HOME/theme/xresources` and re-merged at login by
+    `xprofile`
+
+The script lives in the `sh` component and degrades to whatever is installed,
+so a machine without the `tmux` or `x11` files still gets the rest.
 
 ## License
 

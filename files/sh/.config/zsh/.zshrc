@@ -134,6 +134,28 @@ case "${TERM-}" in
     ;;
 esac
 
+## Follow theme(1) switches in shells that are already running. The mode
+## file is a couple of bytes and is read with builtins only, so checking it
+## at every prompt costs no process. Only registered when shrc already
+## applied a database, that is, when the terminal has colors and dircolors
+## exists.
+if test -n "${_ls_colors_applied-}"; then
+  _theme_precmd(){
+    local mode=""
+    test ! -r "${_theme_mode_file}" || read -r mode < "${_theme_mode_file}"
+    case "${mode}" in
+      light) ;;
+      *) mode="dark";;
+    esac
+    if test "${mode}" != "${_ls_colors_applied}"; then
+      _set_ls_colors
+      zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
+    fi
+  }
+  typeset -ga precmd_functions
+  precmd_functions+=(_theme_precmd)
+fi
+
 unset hostcolor hostletter hostcode dircolor usercolor usercode newline \
       ps1_symbol
 ## }}}

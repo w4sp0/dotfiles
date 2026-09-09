@@ -1,0 +1,195 @@
+# dircolors, light background variant. Monochrome.
+#
+# Derived from the dircolors file in this directory. File types are told
+# apart by lightness and by attributes rather than by hue, on a ladder that
+# runs dark to light against a #d4d4d4 ground:
+#
+#   237 bold  directories, the anchor      243  archives
+#   (238      body text, uncoloured)       244  patches
+#   241 bold  executables                  245  fifo, sock
+#   242 under symbolic links               246  devices, libraries
+#                                          247  backups, deliberately dim
+#
+# The dim end tracks the background: when the ground moved two steps
+# darker, backups moved from 248 to 247 to hold the same separation.
+#
+# Colour is reserved for things that are wrong: broken links, core files,
+# setuid and setgid. In an otherwise grey listing that is what makes them
+# carry. Merely other-writable or sticky directories get reversed grey
+# badges instead, since those are structural rather than alarming.
+#
+# Selected by theme light.
+
+## SPDX-FileCopyrightText: 2004 - 2022 Tim Pope <https://tpo.pe>
+## SPDX-FileCopyrightText: 2023 - 2024 Benjamin Grande M. S. <ben.grande.b@gmail.com>
+## SPDX-FileCopyrightText: 2026 Radek Janik <cyberwassp@gmail.com>
+##
+## SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Credits: https://github.com/tpope/dotfiles/blob/master/.dir_colors
+# vim: set ft=dircolors
+
+# The keywords COLOR, OPTIONS, and EIGHTBIT (honored by the
+# slackware version of dircolors) are recognized but ignored.
+# Below are TERM entries, which can be a glob patterns, to match
+# against the TERM environment variable to determine if it is colorizable.
+TERM Eterm
+TERM ansi
+TERM *color*
+TERM con[0-9]*x[0-9]*
+TERM cons25
+TERM console
+TERM cygwin
+TERM dtterm
+TERM gnome
+TERM hurd
+TERM jfbterm
+TERM konsole
+TERM kterm
+TERM linux
+TERM linux-c
+TERM mlterm
+TERM putty
+TERM rxvt*
+TERM screen*
+TERM st
+TERM terminator
+TERM tmux*
+TERM vt100
+TERM xterm*
+
+# Below are the color init strings for the basic file types.
+# One can use codes for 256 or more colors supported by modern terminals.
+# The default color codes use the capabilities of an 8 color terminal
+# with some additional attributes as per the following codes:
+# Attribute codes:
+# 00=none 01=bold 04=underscore 05=blink 07=reverse 08=concealed
+# Text color codes:
+# 30=black 31=red 32=green 33=yellow 34=blue 35=magenta 36=cyan 37=white
+# Background color codes:
+# 40=black 41=red 42=green 43=yellow 44=blue 45=magenta 46=cyan 47=white
+#NORMAL 00 # no color code at all
+#FILE 00 # regular file: use no color at all
+#RESET 0 # reset to "normal" color
+DIR 01;38;5;237 # directory
+LINK 04;38;5;242 # symbolic link. (If you set this to 'target' instead of a
+# numerical value, the color is as for the file pointed to.)
+# MULTIHARDLINK 00 # regular file with more than one link
+FIFO 38;5;245 # pipe
+SOCK 38;5;245 # socket
+# DOOR 01;44 # door
+BLK 38;5;246 # block device driver
+CHR 38;5;246 # character device driver
+ORPHAN 01;38;5;124 # symlink to nonexistent file
+MISSING 01;38;5;124 # said nonexistent file
+
+SETUID 38;5;231;48;5;124 # file that is setuid (u+s)
+SETGID 38;5;231;48;5;130 # file that is setgid (g+s)
+#CAPABILITY 30;41 # file with capability
+STICKY_OTHER_WRITABLE 38;5;231;48;5;240 # dir that is sticky and other-writable (+t,o+w)
+OTHER_WRITABLE 38;5;237;48;5;250 # dir that is other-writable (o+w) and not sticky
+STICKY 38;5;231;48;5;243 # dir with the sticky bit set (+t) and not other-writable
+# This is for files with execute permission:
+EXEC 01;38;5;241
+
+# List any file extensions like '.gz' or '.tar' that you would like ls
+# to colorize below. Put the extension, a space, and the color init string.
+# (and any comments you want to add after a '#')
+# If you use DOS-style suffixes, you may want to uncomment the following:
+.cmd 01;38;5;241
+.exe 01;38;5;241
+.com 01;38;5;241
+.btm 01;38;5;241
+.bat 01;38;5;241
+# Or if you want to colorize scripts even if they do not have the
+# executable bit actually set.
+#.sh 01;32
+#.csh 01;32
+
+# archives or compressed (bright red)
+.tar 38;5;243
+.tgz 38;5;243
+.arc 38;5;243
+.arj 38;5;243
+.taz 38;5;243
+.lha 38;5;243
+.lz4 38;5;243
+.lzh 38;5;243
+.lzma 38;5;243
+.tlz 38;5;243
+.txz 38;5;243
+.tzo 38;5;243
+.t7z 38;5;243
+.zip 38;5;243
+.ZIP 38;5;243
+.z 38;5;243
+.Z 38;5;243
+.dz 38;5;243
+.gz 38;5;243
+.lrz 38;5;243
+.lz 38;5;243
+.lzo 38;5;243
+.xz 38;5;243
+.zst 38;5;243
+.tzst 38;5;243
+.bz2 38;5;243
+.bz 38;5;243
+.tbz 38;5;243
+.tbz2 38;5;243
+.tz 38;5;243
+.deb 38;5;243
+.rpm 38;5;243
+.jar 38;5;243
+.war 38;5;243
+.ear 38;5;243
+.sar 38;5;243
+.rar 38;5;243
+.alz 38;5;243
+.ace 38;5;243
+.zoo 38;5;243
+.cpio 38;5;243
+.7z 38;5;243
+.rz 38;5;243
+.cab 38;5;243
+.wim 38;5;243
+.swm 38;5;243
+.dwm 38;5;243
+.esd 38;5;243
+
+# backup and temporary files
+*~ 38;5;247
+*- 38;5;247
+.old 38;5;247
+.OLD 38;5;247
+.bak 38;5;247
+.BAK 38;5;247
+.back 38;5;247
+.dpkg-old 38;5;247
+.swp 38;5;247
+.swo 38;5;247
+.aux 38;5;247
+.bbl 38;5;247
+.glo 38;5;247
+.gls 38;5;247
+.ind 38;5;247
+.idx 38;5;247
+.blg 38;5;247
+
+# system libraries, etc.
+.so 38;5;246
+.o 38;5;246
+.a 38;5;246
+.dll 38;5;246
+.rbc 38;5;246
+.pyc 38;5;246
+.class 38;5;246
+
+# patches
+.diff 38;5;244
+.patch 38;5;244
+
+# misc.
+.dpkg-dist 01;38;5;124
+*core 01;38;5;124
+.lnk 04;38;5;242
+.url 04;38;5;242
