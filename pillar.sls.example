@@ -25,6 +25,7 @@ qusal:
   dotfiles:
     all: true
     dom0: true
+    font: true
     git: true
     gtk: true
     mutt: true

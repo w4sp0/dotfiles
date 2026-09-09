@@ -33,7 +33,7 @@ Configuration and scripts targeting:
     *   Drop-in configuration files
     *   Tested in Qubes OS Dom0, Debian, Fedora, OpenBSD
 *   Tasks:
-    *   GUI: x11, gtk
+    *   GUI: x11, gtk, font
     *   SCM: git, tig, git-shell
     *   Keys: gpg, ssh
     *   Networking: curl, urlview, wget, w3m

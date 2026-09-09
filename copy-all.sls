@@ -7,6 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 {%- if  salt["pillar.get"]("qusal:dotfiles:all", default=True) or
         salt["pillar.get"]("qusal:dotfiles:dom0") or
+        salt["pillar.get"]("qusal:dotfiles:font") or
         salt["pillar.get"]("qusal:dotfiles:git") or
         salt["pillar.get"]("qusal:dotfiles:gtk") or
         salt["pillar.get"]("qusal:dotfiles:mutt") or
@@ -21,6 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 include:
   - {{ slsdotpath }}.copy-dom0
+  - {{ slsdotpath }}.copy-font
   - {{ slsdotpath }}.copy-git
   - {{ slsdotpath }}.copy-gtk
   - {{ slsdotpath }}.copy-mutt
