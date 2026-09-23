@@ -8,7 +8,9 @@ set -eu
 
 if command -v qvm-open-in-dvm >/dev/null; then
   qvm-open-in-dvm --view-only -- "$1"
-elif test -n "${BROWSER-}"; then
+elif test -n "${BROWSER-}" && test "${BROWSER##*/}" != "${0##*/}"; then
+  ## Skip BROWSER when it points back to this script, it would call itself
+  ## with no limit.
   "${BROWSER}" "$1"
 else
   xdg-open "$1"
