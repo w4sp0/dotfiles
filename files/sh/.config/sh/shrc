@@ -113,8 +113,11 @@ has qubesctl && {
   alias qctlu="qctl --skip-dom0 --targets"
   qctlus(){
     test -n "${2-}" || return 1
-    # shellcheck disable=SC3058
-    qubesctl --skip-dom0 --targets "${1}" state.apply "${@#"${1}"}"
+    (
+      targets="${1}"
+      shift
+      qubesctl --skip-dom0 --targets "${targets}" state.apply "${@}"
+    )
   }
 }
 has gpg && alias gpgs="gpg --show-keys"
